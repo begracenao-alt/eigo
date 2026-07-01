@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>まねっこ英語</title>
+<style>
+  :root{
+    --bg:#fff8ec; --card:#ffffff; --line:#f0e4cf;
+    --text:#4a4238; --sub:#9a8f7c;
+    --sun:#f5b942; --sun-d:#e09b1f;
+    --pink:#ef9aa8; --blue:#7cc0d8; --green:#8fc78a; --purple:#b79ad6;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{
+    margin:0; font-family:-apple-system,"Hiragino Kaku Gothic ProN","メイリオ",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6; padding-bottom:40px;
+  }
+  header{
+    background:var(--sun); color:#5a4520; text-align:center; padding:18px 16px 16px;
+    box-shadow:0 2px 10px rgba(224,155,31,.25);
+  }
+  header h1{ margin:0; font-size:24px; letter-spacing:.08em; }
+  header .sub{ font-size:13px; margin-top:3px; opacity:.85; }
+
+  .wrap{ max-width:600px; margin:0 auto; padding:14px 12px; }
+
+  .speed{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin:6px 0 14px; font-size:14px; color:var(--sub);
+  }
+  .speed .toggle{
+    display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:30px; overflow:hidden;
+  }
+  .speed .toggle button{
+    border:none; background:transparent; padding:8px 16px; font-size:14px; color:var(--sub); cursor:pointer;
+  }
+  .speed .toggle button.on{ background:var(--sun); color:#5a4520; font-weight:bold; }
+
+  .chips{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; padding:4px 2px 14px; }
+  .chip{
+    border:1px solid var(--line); background:#fff; color:var(--text);
+    border-radius:30px; padding:8px 15px; font-size:15px; cursor:pointer; white-space:nowrap;
+  }
+  .chip.on{ background:var(--text); color:#fff; border-color:var(--text); }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:380px){ .grid{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--card); border:2px solid var(--line); border-radius:20px;
+    padding:16px 14px; cursor:pointer; text-align:center; position:relative;
+    transition:transform .08s, box-shadow .15s; user-select:none;
+  }
+  .card:active{ transform:scale(.97); }
+  .card.playing{ border-color:var(--sun); box-shadow:0 0 0 4px rgba(245,185,66,.25); }
+  .card .emoji{ font-size:34px; line-height:1; }
+  .card .en{ font-size:21px; font-weight:bold; margin:8px 0 4px; color:var(--text); }
+  .card .ja{ font-size:14px; color:var(--sub); }
+  .card .spk{ position:absolute; top:10px; right:12px; font-size:16px; opacity:.5; }
+
+  .hint{ text-align:center; color:var(--sub); font-size:13px; margin:16px 8px 0; }
+  .nosupport{ display:none; background:#fdeaea; color:#b45; border-radius:12px; padding:12px; margin:12px 0; font-size:13px; text-align:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>まねっこ英語</h1>
+  <div class="sub">きいて、まねして、しみこむ 🍪</div>
+</header>
+
+<div class="wrap">
+
+  <div class="speed">
+    <span>こえの はやさ</span>
+    <span class="toggle">
+      <button id="slowBtn" class="on">ゆっくり</button>
+      <button id="normBtn">ふつう</button>
+    </span>
+  </div>
+
+  <div id="nosupport" class="nosupport">
+    ※このブラウザでは、声が出ないことがあります。Safari や Chrome でひらくと、うまくいきやすいです😊
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="hint">カードをタップすると、英語の声がきけます😊<br>まねして、口に出してみてね。</div>
+
+</div>
+
+<script>
+const DATA = {
+  "あいさつ": [
+    {en:"Hi!", ja:"やあ！", emoji:"👋"},
+    {en:"Good morning!", ja:"おはよう！", emoji:"☀️"},
+    {en:"What's up?", ja:"元気？ / どうしたの？", emoji:"😊"},
+    {en:"How are you?", ja:"調子どう？", emoji:"🙂"},
+    {en:"How's it going?", ja:"最近どう？", emoji:"😄"},
+    {en:"Long time no see!", ja:"ひさしぶり！", emoji:"🤗"},
+    {en:"Nice to meet you!", ja:"はじめまして！", emoji:"🤝"},
+    {en:"See you later!", ja:"またあとでね！", emoji:"👋"},
+    {en:"See you tomorrow!", ja:"また明日ね！", emoji:"🙌"},
+    {en:"Take care!", ja:"気をつけてね！", emoji:"💛"},
+    {en:"Have a good day!", ja:"いい一日をね！", emoji:"🌈"},
+    {en:"Good night!", ja:"おやすみ！", emoji:"🌙"},
+  ],
+  "あいづち": [
+    {en:"Really?", ja:"ほんとに？", emoji:"😮"},
+    {en:"For real?", ja:"まじで？", emoji:"😲"},
+    {en:"Me too!", ja:"わたしも！", emoji:"🙋"},
+    {en:"Nice!", ja:"いいね！", emoji:"👍"},
+    {en:"Cool!", ja:"かっこいい！ / いいね！", emoji:"😎"},
+    {en:"Awesome!", ja:"サイコー！", emoji:"🤩"},
+    {en:"No way!", ja:"うそでしょ！", emoji:"😆"},
+    {en:"Exactly!", ja:"それな！ / その通り！", emoji:"💯"},
+    {en:"Got it.", ja:"わかった！", emoji:"👌"},
+    {en:"Sounds good!", ja:"いいね、そうしよ！", emoji:"😄"},
+    {en:"Of course!", ja:"もちろん！", emoji:"😊"},
+    {en:"Good idea!", ja:"いい考えだね！", emoji:"💡"},
+  ],
+  "きもち": [
+    {en:"I'm so happy!", ja:"すっごくうれしい！", emoji:"😊"},
+    {en:"Yay!", ja:"やったー！", emoji:"🎉"},
+    {en:"I'm excited!", ja:"わくわくする！", emoji:"🤗"},
+    {en:"I'm tired.", ja:"つかれた〜", emoji:"😪"},
+    {en:"I'm sleepy.", ja:"ねむい…", emoji:"🥱"},
+    {en:"I love it!", ja:"だいすき！", emoji:"💖"},
+    {en:"Oh no!", ja:"えー、こまった！", emoji:"😱"},
+    {en:"That's too bad.", ja:"それは残念だね", emoji:"😢"},
+    {en:"Don't worry.", ja:"だいじょうぶだよ", emoji:"🤗"},
+    {en:"I'm fine.", ja:"へいきだよ", emoji:"🙂"},
+    {en:"So cute!", ja:"かわいい〜！", emoji:"🥰"},
+    {en:"I can't wait!", ja:"たのしみ！", emoji:"✨"},
+  ],
+  "ごはん": [
+    {en:"Yummy!", ja:"おいし〜！", emoji:"😋"},
+    {en:"I'm hungry.", ja:"おなかすいた", emoji:"🍽️"},
+    {en:"I'm starving!", ja:"ペコペコ！", emoji:"😵"},
+    {en:"Let's eat!", ja:"食べよう！", emoji:"🍴"},
+    {en:"This is so good!", ja:"これ、すごくおいしい！", emoji:"😍"},
+    {en:"I'm full.", ja:"おなかいっぱい", emoji:"😌"},
+    {en:"Cheers!", ja:"かんぱーい！", emoji:"🥂"},
+    {en:"Smells good!", ja:"いいにおい！", emoji:"👃"},
+    {en:"Want some?", ja:"食べる？ / いる？", emoji:"🤲"},
+    {en:"Let's get coffee.", ja:"コーヒー飲も！", emoji:"☕"},
+    {en:"One cookie, please.", ja:"クッキー ひとつ ください", emoji:"🍪"},
+    {en:"So sweet!", ja:"あま〜い！", emoji:"🍬"},
+  ],
+  "おでかけ": [
+    {en:"Let's go!", ja:"行こう！", emoji:"🚶"},
+    {en:"Wait up!", ja:"待って〜！", emoji:"🙌"},
+    {en:"Hurry up!", ja:"急いで〜！", emoji:"⏰"},
+    {en:"I'm on my way.", ja:"いま向かってるよ", emoji:"🏃"},
+    {en:"Almost there.", ja:"もうすぐ着くよ", emoji:"📍"},
+    {en:"Look at that!", ja:"あれ見て！", emoji:"👀"},
+    {en:"It's so pretty!", ja:"きれいだね！", emoji:"✨"},
+    {en:"Let's take a picture!", ja:"写真とろう！", emoji:"📸"},
+    {en:"Let's go home.", ja:"おうち帰ろう", emoji:"🏠"},
+    {en:"That was fun!", ja:"たのしかったね！", emoji:"😆"},
+    {en:"I'm home!", ja:"ただいま！", emoji:"🚪"},
+    {en:"Let's do it again!", ja:"また行こうね！", emoji:"🔁"},
+  ],
+  "こまったとき": [
+    {en:"Help me, please.", ja:"たすけて、ください", emoji:"🆘"},
+    {en:"I don't know.", ja:"わからないな", emoji:"🤷"},
+    {en:"One more time, please.", ja:"もう一回、おねがい", emoji:"🔁"},
+    {en:"Slowly, please.", ja:"ゆっくり、おねがい", emoji:"🐢"},
+    {en:"What's this?", ja:"これ、なに？", emoji:"❓"},
+    {en:"Where's the bathroom?", ja:"トイレ どこ？", emoji:"🚻"},
+    {en:"How much is it?", ja:"いくら？", emoji:"💰"},
+    {en:"Just a moment.", ja:"ちょっと待ってね", emoji:"✋"},
+  ],
+  "やさしい一言": [
+    {en:"Thank you!", ja:"ありがとう！", emoji:"🙏"},
+    {en:"Thanks a lot!", ja:"ほんとにありがとう！", emoji:"💐"},
+    {en:"You're welcome.", ja:"どういたしまして", emoji:"😊"},
+    {en:"Sorry!", ja:"ごめんね！", emoji:"🙇"},
+    {en:"It's okay.", ja:"いいんだよ", emoji:"🤍"},
+    {en:"Here you go.", ja:"はい、どうぞ", emoji:"🤲"},
+    {en:"Good job!", ja:"よくできたね！", emoji:"👏"},
+    {en:"You can do it!", ja:"きみならできるよ！", emoji:"💪"},
+    {en:"I'm proud of you.", ja:"あなたが誇りだよ", emoji:"🌟"},
+    {en:"I miss you.", ja:"会いたいな", emoji:"🥺"},
+    {en:"I love you.", ja:"大好きだよ", emoji:"❤️"},
+    {en:"You're the best!", ja:"あなたがいちばん！", emoji:"🏆"},
+  ],
+};
+
+let currentCat = Object.keys(DATA)[0];
+let currentRate = 0.7; // ゆっくり
+
+// 声の準備
+let voices = [];
+function loadVoices(){ voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; }
+if(window.speechSynthesis){
+  loadVoices();
+  if(speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+} else {
+  document.getElementById("nosupport").style.display="block";
+}
+
+function pickVoice(){
+  return voices.find(v=>/en[-_]?US/i.test(v.lang))
+      || voices.find(v=>/^en/i.test(v.lang))
+      || null;
+}
+
+let playingEl=null;
+function speak(text, el){
+  if(!window.speechSynthesis){ return; }
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="en-US"; u.rate=currentRate; u.pitch=1.05;
+  const v=pickVoice(); if(v) u.voice=v;
+  if(playingEl) playingEl.classList.remove("playing");
+  if(el){ el.classList.add("playing"); playingEl=el;
+    u.onend=()=>{ el.classList.remove("playing"); };
+  }
+  speechSynthesis.speak(u);
+}
+
+// チップ（カテゴリー）
+function renderChips(){
+  const c=document.getElementById("chips");
+  c.innerHTML="";
+  Object.keys(DATA).forEach(cat=>{
+    const b=document.createElement("button");
+    b.className="chip"+(cat===currentCat?" on":"");
+    b.textContent=cat;
+    b.onclick=()=>{ currentCat=cat; renderChips(); renderGrid(); };
+    c.appendChild(b);
+  });
+}
+
+// カード
+function renderGrid(){
+  const g=document.getElementById("grid");
+  g.innerHTML="";
+  DATA[currentCat].forEach(item=>{
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <div class="spk">🔊</div>
+      <div class="emoji">${item.emoji}</div>
+      <div class="en">${item.en}</div>
+      <div class="ja">${item.ja}</div>`;
+    card.onclick=()=>speak(item.en, card);
+    g.appendChild(card);
+  });
+}
+
+// はやさ切りかえ
+const slowBtn=document.getElementById("slowBtn");
+const normBtn=document.getElementById("normBtn");
+slowBtn.onclick=()=>{ currentRate=0.7; slowBtn.classList.add("on"); normBtn.classList.remove("on"); };
+normBtn.onclick=()=>{ currentRate=0.95; normBtn.classList.add("on"); slowBtn.classList.remove("on"); };
+
+renderChips();
+renderGrid();
+</script>
+</body>
+</html>
